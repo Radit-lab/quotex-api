@@ -1,0 +1,16 @@
+{
+  "name": "quotex-candles-js",
+  "version": "1.0.0",
+  "description": "JavaScript client for Quotex candle data",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2"
+  },
+  "scripts": {
+    "start": "node server-api.js"
+  }
+}
