@@ -176,27 +176,31 @@ async def stream_candle(asset: str, timeframe: str = "M1"):
                 return
             
             await c.start_realtime_price(asset_name, period)
+            await asyncio.sleep(2)  # Wait for initial data
             
             while True:
-                candle_price_data = await c.get_realtime_price(asset_name)
-                
-                if candle_price_data:
-                    latest_data = candle_price_data[-1]
-                    timestamp = latest_data['time']
-                    price = latest_data['price']
-                    bd_time = datetime.fromtimestamp(timestamp, tz=BD_TZ)
-                    formatted_time = bd_time.strftime('%H:%M:%S')
+                try:
+                    candle_price_data = await c.get_realtime_price(asset_name)
                     
-                    data = {
-                        "asset": asset_name,
-                        "timeframe": timeframe.upper(),
-                        "timestamp": timestamp,
-                        "time": formatted_time,
-                        "time_bd": bd_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
-                        "price": price
-                    }
-                    
-                    yield f"data: {json.dumps(data)}\n\n"
+                    if candle_price_data:
+                        latest_data = candle_price_data[-1]
+                        timestamp = latest_data['time']
+                        price = latest_data['price']
+                        bd_time = datetime.fromtimestamp(timestamp, tz=BD_TZ)
+                        formatted_time = bd_time.strftime('%H:%M:%S')
+                        
+                        data = {
+                            "asset": asset_name,
+                            "timeframe": timeframe.upper(),
+                            "timestamp": timestamp,
+                            "time": formatted_time,
+                            "time_bd": bd_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
+                            "price": price
+                        }
+                        
+                        yield f"data: {json.dumps(data)}\n\n"
+                except Exception as inner_e:
+                    pass  # Skip errors in loop
                 
                 await asyncio.sleep(0.5)
                 
@@ -218,6 +222,7 @@ async def get_live_candle(asset: str, timeframe: str = "M1", wait_near_close: bo
             return JSONResponse({"error": f"Asset {asset} is closed"}, status_code=400)
         
         await c.start_realtime_price(asset_name, period)
+        await asyncio.sleep(2)  # Wait for initial data
         
         if wait_near_close:
             await wait_for_signal_window(period)
@@ -267,25 +272,29 @@ async def websocket_stream(websocket: WebSocket, asset: str, timeframe: str = "M
             return
         
         await c.start_realtime_price(asset_name, period)
+        await asyncio.sleep(2)  # Wait for initial data
         
         while True:
-            candle_price_data = await c.get_realtime_price(asset_name)
-            
-            if candle_price_data:
-                latest_data = candle_price_data[-1]
-                timestamp = latest_data['time']
-                price = latest_data['price']
-                bd_time = datetime.fromtimestamp(timestamp, tz=BD_TZ)
-                formatted_time = bd_time.strftime('%H:%M:%S')
+            try:
+                candle_price_data = await c.get_realtime_price(asset_name)
                 
-                await websocket.send_json({
-                    "asset": asset_name,
-                    "timeframe": timeframe.upper(),
-                    "timestamp": timestamp,
-                    "time": formatted_time,
-                    "time_bd": bd_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
-                    "price": price
-                })
+                if candle_price_data:
+                    latest_data = candle_price_data[-1]
+                    timestamp = latest_data['time']
+                    price = latest_data['price']
+                    bd_time = datetime.fromtimestamp(timestamp, tz=BD_TZ)
+                    formatted_time = bd_time.strftime('%H:%M:%S')
+                    
+                    await websocket.send_json({
+                        "asset": asset_name,
+                        "timeframe": timeframe.upper(),
+                        "timestamp": timestamp,
+                        "time": formatted_time,
+                        "time_bd": bd_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
+                        "price": price
+                    })
+            except Exception as inner_e:
+                pass  # Skip errors in loop
             
             await asyncio.sleep(0.1)
             
