@@ -7,7 +7,7 @@ import json
 import uvicorn
 from pyquotex.stable_api import Quotex
 from pyquotex.config import credentials
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 app = FastAPI(title="PyQuotex Live API")
 client = None
@@ -25,6 +25,9 @@ TIMEFRAMES = {
 
 SIGNAL_WINDOW_START = 50
 SIGNAL_WINDOW_END = 55
+
+# Bangladesh timezone (UTC+6)
+BD_TZ = timezone(timedelta(hours=6))
 
 
 async def get_client():
@@ -181,13 +184,15 @@ async def stream_candle(asset: str, timeframe: str = "M1"):
                     latest_data = candle_price_data[-1]
                     timestamp = latest_data['time']
                     price = latest_data['price']
-                    formatted_time = time_module.strftime('%H:%M:%S', time_module.localtime(timestamp))
+                    bd_time = datetime.fromtimestamp(timestamp, tz=BD_TZ)
+                    formatted_time = bd_time.strftime('%H:%M:%S')
                     
                     data = {
                         "asset": asset_name,
                         "timeframe": timeframe.upper(),
                         "timestamp": timestamp,
                         "time": formatted_time,
+                        "time_bd": bd_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
                         "price": price
                     }
                     
@@ -223,7 +228,8 @@ async def get_live_candle(asset: str, timeframe: str = "M1", wait_near_close: bo
             latest_data = candle_price_data[-1]
             timestamp = latest_data['time']
             price = latest_data['price']
-            formatted_time = time_module.strftime('%H:%M:%S', time_module.localtime(timestamp))
+            bd_time = datetime.fromtimestamp(timestamp, tz=BD_TZ)
+            formatted_time = bd_time.strftime('%H:%M:%S')
             
             current_time = time_module.time()
             seconds_into_candle = int(current_time % period)
@@ -233,6 +239,7 @@ async def get_live_candle(asset: str, timeframe: str = "M1", wait_near_close: bo
                 "timeframe": timeframe.upper(),
                 "timestamp": timestamp,
                 "time": formatted_time,
+                "time_bd": bd_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
                 "price": price,
                 "seconds_into_candle": seconds_into_candle,
                 "is_near_close": seconds_into_candle >= SIGNAL_WINDOW_START
@@ -268,13 +275,15 @@ async def websocket_stream(websocket: WebSocket, asset: str, timeframe: str = "M
                 latest_data = candle_price_data[-1]
                 timestamp = latest_data['time']
                 price = latest_data['price']
-                formatted_time = time_module.strftime('%H:%M:%S', time_module.localtime(timestamp))
+                bd_time = datetime.fromtimestamp(timestamp, tz=BD_TZ)
+                formatted_time = bd_time.strftime('%H:%M:%S')
                 
                 await websocket.send_json({
                     "asset": asset_name,
                     "timeframe": timeframe.upper(),
                     "timestamp": timestamp,
                     "time": formatted_time,
+                    "time_bd": bd_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
                     "price": price
                 })
             
