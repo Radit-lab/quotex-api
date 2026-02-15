@@ -156,10 +156,21 @@ async def analyze_running_candle(asset: str, timeframe: str = "M1"):
 @app.get("/")
 async def root():
     return {"status": "PyQuotex Live API", "version": "1.0", "endpoints": {
+        "health": "/health",
         "stream": "/stream/{asset}?timeframe=M1",
         "candle": "/candle/{asset}?timeframe=M1",
         "analyze": "/analyze/{asset}?timeframe=M1"
     }}
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "message": "API is running",
+        "timestamp": time_module.time(),
+        "client_connected": client is not None
+    }
 
 
 @app.get("/stream/{asset}")
